@@ -239,9 +239,7 @@ const Home1 = () => {
     }
   };
   useEffect(() => {
-    if (currentAccount === "" && isLogout == 0) {
-      ConnectWallet();
-    }
+   
     console.log("running the useeffect");
     getBal();
   }, [currentAccount, refresh, num]);
