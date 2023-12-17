@@ -3,7 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
     "@ethersproject/providers": "^5.7.2",
+    "@mui/material": "^5.15.0",
+    "@mui/styled-engine-sc": "^6.0.0-alpha.8",
     "@popperjs/core": "^2.11.8",
     "@solana/wallet-adapter-phantom": "^0.9.24",
     "@splinetool/react-spline": "^2.2.6",
@@ -19,7 +23,9 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.17.0",
     "react-scripts": "5.0.1",
+    "react-simple-chatbot": "^0.6.1",
     "reactjs-popup": "^2.0.6",
+    "styled-components": "^4.4.1",
     "typescript": "^5.3.3",
     "web-vitals": "^2.1.4"
   },

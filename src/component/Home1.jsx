@@ -7,6 +7,7 @@ import "reactjs-popup/dist/index.css";
 import PostComponent from "./PostComponent";
 import axios from "axios";
 import SendPost from "./SendPost";
+import Alert from "@mui/material/Alert";
 
 const Home1 = () => {
   const navigate = useNavigate();
@@ -27,17 +28,42 @@ const Home1 = () => {
   const [userData, setUserData] = useState([]);
   const [isPost, setIsPost] = useState(false);
   const [transactionCount, setTransactionCount] = useState(0);
-  const [allPost,setAllPost]= useState([]);
-  const [allSequencePost,setAllSequencePost]= useState([]);
+  const [allPost, setAllPost] = useState([]);
+  const [allSequencePost, setAllSequencePost] = useState([]);
   const [postIndex, setPostIndex] = useState(0);
-  const [allPrivatePost,setAllPrivatePost]= useState([]);
-  const [userPrivatePost,setUserPrivatePost] = useState([])
+  const [allPrivatePost, setAllPrivatePost] = useState([]);
+  const [userPrivatePost, setUserPrivatePost] = useState([]);
+  const [isLogout, setIsLogout] = useState(0);
+  const [rewardLikes, setRewardLikes] = useState(0);
+  const [rewardComments, setRewardComments] = useState(0);
+  const [countBuyCoin, setCountBuyCoin] = useState(1);
+  const [isBuyCoinModal, setIsBuyCoinModal] = useState(false);
+  const [isAlertSuccess, setIsAlertSuccess] = useState(false);
+  const [successAlertContent, setSuccessAlertContent] = useState("");
+  const [isAlertInfo, setIsAlertInfo] = useState(false);
 
+  const handleIncrement = () => {
+    setCountBuyCoin((prevCount) => prevCount + 1);
+  };
 
+  const handleDecrement = () => {
+    if (countBuyCoin > 1) {
+      setCountBuyCoin((prevCount) => prevCount - 1);
+    }
+  };
 
   // Function to handle file change
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);
+  };
+
+  const showSuccessPopup = (successMessage) => {
+    console.log("ShowSuccess", successMessage);
+    setSuccessAlertContent(successMessage);
+    setIsAlertSuccess(true);
+    setTimeout(() => {
+      setIsAlertSuccess(false);
+    }, 5000);
   };
 
   const interests = [
@@ -146,8 +172,8 @@ const Home1 = () => {
     getUserPost,
     getAllPrivatePost,
     getUserPrivatePost,
-
-
+    getRewardStatus,
+    buyCoin,
   } = useContext(Context);
   const handleConnectWallet = async () => {
     await ConnectWallet();
@@ -160,37 +186,41 @@ const Home1 = () => {
       const post = await getAllPost();
       const privatePost = await getAllPrivatePost();
       const userPrivate = await getUserPrivatePost(currentAccount);
+      const _reward = await getRewardStatus(currentAccount);
+      console.log("reward score", Number(_reward));
 
+      const _tempLike = Math.floor(_reward / 1000);
+      const _tempComment = _reward % 1000;
+
+      console.log("reward score ceil", _tempLike, " comment", _tempComment);
+      setRewardComments(_tempComment);
+      setRewardLikes(_tempLike);
 
       //  const login =async ()=>{num= await isNewUser()} ;
       //  login();
       // let num= await isNewUser();
       setNum(Number(bal.user_id));
       setUserPrivatePost(userPrivate);
-      console.log('userPrivate',userPrivate)
+      console.log("userPrivate", userPrivate);
       const shuffleArray = (array) => {
-        const shuffled = [...array]; 
+        const shuffled = [...array];
         for (let i = shuffled.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
-          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; 
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         return shuffled;
       };
-      setAllPost( shuffleArray(post));
-      console.log('postData,',allPost);
-      setAllPrivatePost(privatePost)
-
-      
+      setAllPost(shuffleArray(post));
+      console.log("postData,", allPost);
+      setAllPrivatePost(privatePost);
 
       setAllSequencePost(post);
-      console.log('sequence post',allSequencePost)
+      console.log("sequence post", allSequencePost);
 
-
-      
       // setAllPost(post)
       console.log("numm", num, "type", typeof num);
 
-      console.log('refresh',refresh)
+      console.log("refresh", refresh);
       if (!num) {
         //  const create = async()=>{
         //    await createUser('tt',1);
@@ -209,12 +239,33 @@ const Home1 = () => {
     }
   };
   useEffect(() => {
-    console.log("running the useeffect")
+    if (currentAccount === "" && isLogout == 0) {
+      ConnectWallet();
+    }
+    console.log("running the useeffect");
     getBal();
-  }, [currentAccount,refresh, num]);
+  }, [currentAccount, refresh, num]);
   return (
     <div className="bg-black h-full">
       <div className="flex h-[100vh]">
+        {/* alert success */}
+        <div
+          className={`absolute z-20 ml-[34rem] mt-10 ${
+            isAlertSuccess ? "flex" : "hidden"
+          }`}
+        >
+          <Alert severity="success">{successAlertContent}</Alert>
+        </div>
+        {/* alert success end */}
+        {/* alert info */}
+        <div
+          className={`absolute z-20 ml-[34rem] mt-10 ${
+            isAlertInfo ? "flex" : "hidden"
+          }`}
+        >
+          <Alert severity="info">Waiting for Metamask...</Alert>
+        </div>
+        {/* alert info end */}
         {/* spinner */}
         <div
           className={` absolute   items-center justify-center h-full w-full  z-50  ${
@@ -242,14 +293,94 @@ const Home1 = () => {
           </div>
         </div>
         {/* spinner end */}
-        {/* post modal */}
+        {/* buycoin  */}
         <div
           className={` top-0 left-0 w-full h-full z-10 backdrop-filter backdrop-blur-sm ${
+            isBuyCoinModal ? "fixed" : "hidden"
+          } `}
+        >
+          <div className="absolute left-[30rem] top-[7rem] mx-auto z-10 flex flex-col items-center justify-center min-h-[70vh] ">
+            <div className="relative w-full h-[259px] text-left text-sm text-black font-inter">
+              <div
+                onClick={() => {
+                  setIsBuyCoinModal(false);
+                }}
+                className="relative top-11 cursor-pointer hover:animate-bounce left-[10rem] z-10"
+              >
+                <img
+                  className="h-4 ml-[13rem]"
+                  src="https://cdn.discordapp.com/attachments/1184864067295395960/1185694131050266624/image.png?ex=65908ab5&is=657e15b5&hm=dd19c0374df3b041ce7e6c32b2dc440560f7d6011fd005de55719fe5c59412f9&"
+                  alt=""
+                />
+              </div>
+              <div className="absolute top-[30px] h-[17rem] left-[140px] rounded-2xl [background:linear-gradient(180.13deg,_#202020,_#181818)] box-border w-[271px]  overflow-hidden border-t-[2px] border-solid border-[#282828] border-r-[1px] border-l-[1px]">
+                <img
+                  className="absolute top-[13px] left-[50px] w-[128.45px] h-[135.89px] object-cover"
+                  alt=""
+                  src="   https://cdn.discordapp.com/attachments/1184864067295395960/1185642599332192307/image.png?ex=65905ab7&is=657de5b7&hm=71c7d9bab26434a937493f7b7ebc1d5622601814306a96ae565828467e900eb7&"
+                />
+                <img
+                  className="absolute top-[10px] left-[60px] w-[174.96px] h-[178.22px] object-cover"
+                  alt=""
+                  src="https://cdn.discordapp.com/attachments/1184864067295395960/1185641928847527936/image.png?ex=65905a17&is=657de517&hm=652d84dd8d1a39a6d6ea2850e469a17fb054c4a708f566aab57bc6428afdcb0e&"
+                />
+                <div
+                  onClick={async () => {
+                    await buyCoin(
+                      countBuyCoin,
+                      setSpin,
+                      showSuccessPopup,
+                      setIsAlertInfo
+                    );
+                  }}
+                  className="absolute cursor-pointer top-[174px] left-[147px] rounded-md [background:linear-gradient(106.75deg,_#fdd835,_#fff_49.15%,_#ffd000)] box-border w-[103px] h-[41px] overflow-hidden border-t-[1px] border-solid border-cornsilk border-r-[1px] border-l-[1px]"
+                >
+                  <div className="absolute top-[12px] left-[18px] font-medium">
+                    Buy Coins
+                  </div>
+                </div>
+
+                <div className="absolute top-[174px] left-[24px] rounded-md bg-white box-border w-[103px] h-[41px] overflow-hidden border-t-[1px] border-solid border-gainsboro border-r-[1px] border-l-[1px]">
+                  <div className="absolute top-[12px] left-[45px] font-semibold">
+                    {countBuyCoin}
+                  </div>
+                  <img
+                    className="absolute cursor-pointer top-[11px] left-[70px] w-[19px] h-[19px] overflow-hidden object-cover"
+                    alt=""
+                    src="     https://cdn.discordapp.com/attachments/1184864067295395960/1185645863620579388/image.png?ex=65905dc2&is=657de8c2&hm=1a7bb3548d029c6448ddc1acc93872fd4414f13a225919fa8a57f280d4526dfc&"
+                    onClick={handleIncrement}
+                  />
+                  <img
+                    className="absolute top-[12px] cursor-pointer left-[10px] w-[19px] h-[18px] overflow-hidden object-cover"
+                    alt=""
+                    src="   https://cdn.discordapp.com/attachments/1184864067295395960/1185645933438971944/image.png?ex=65905dd2&is=657de8d2&hm=d19e79ee3cb4775a71d1934bddd314bf468c9fecc807534b9f4ceb23e3f66790&"
+                    onClick={handleDecrement}
+                  />
+                </div>
+                <p className="text-white text-[0.7rem] absolute left-5 top-[15rem]">
+                  {" "}
+                  <span className="underline">
+                    {0.01 * countBuyCoin} ETH
+                  </span>{" "}
+                  will be Deducted form your account
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* buycoin end */}
+        {/* post modal */}
+        <div
+          className={` top-0 left-0 w-full h-full z-40 backdrop-filter backdrop-blur-sm ${
             isPost ? "fixed" : "hidden"
           } `}
         >
           <div className="absolute left-[30rem] top-[7rem] mx-auto z-10 flex flex-col items-center justify-center min-h-[70vh] ">
-            <SendPost close={setIsPost} spin={setSpin} count={setTransactionCount} />
+            <SendPost
+              close={setIsPost}
+              spin={setSpin}
+              count={setTransactionCount}
+            />
           </div>
         </div>
 
@@ -362,7 +493,7 @@ const Home1 = () => {
                     </button>
                   ))}
                 </div>
-                <button className="border border-[color:var(--gray-600,#4B5563)] bg-white w-[127px] self-center px-5 py-2.5 rounded-3xl">
+                <button className="border mt-[20px] border-[color:var(--gray-600,#4B5563)] bg-white w-[127px] self-center px-5 py-2.5 rounded-3xl">
                   <div
                     onClick={async () => {
                       // console.log(regUsername);
@@ -377,9 +508,14 @@ const Home1 = () => {
                         `Name:${regName}, Username: ${regUsername} , url : ${url} interests: ${selectedInterests}`
                       );
                       console.log("obj1:", obj1);
-                      setSpin(true);
-                      await createUser(obj1);
-                      setSpin(false);
+
+                      await createUser(
+                        obj1,
+                        setSpin,
+                        showSuccessPopup,
+                        setIsAlertInfo
+                      );
+
                       setIsRegister(1);
                     }}
                     className="text-black text-sm font-medium self-center"
@@ -405,7 +541,12 @@ const Home1 = () => {
 
           <div className="relative bottom-[5rem] w-full flex  items-start justify-center  ">
             <div className="flex flex-col gap-[2.25rem] text-left text-[1.25rem] text-white font-inter">
-              <div className="flex flex-row  cursor-not-allowed items-center justify-start gap-[0.63rem]">
+              <div
+                onClick={() => {
+                  navigate("/home1");
+                }}
+                className="flex flex-row  cursor-pointer items-center justify-start gap-[0.63rem]"
+              >
                 <img
                   className="relative bottom-[0.2rem] w-[1.31rem] h-[1.31rem] overflow-hidden shrink-0"
                   alt=""
@@ -413,17 +554,32 @@ const Home1 = () => {
                 />
                 <div className="relative font-medium ">Home</div>
               </div>
-              <div className="flex flex-row hover:opacity-50 cursor-pointer items-center justify-start gap-[0.63rem]">
+              <div
+                onClick={() => {
+                  navigate("/notifications");
+                }}
+                className="flex flex-row hover:opacity-50 cursor-pointer items-center justify-start gap-[0.63rem]"
+              >
                 <img
                   className="relative w-[1rem] h-[1.19rem]"
                   alt=""
                   src="https://cdn.discordapp.com/attachments/1177493315898314792/1184069785865171014/image.png?ex=658aa1eb&is=65782ceb&hm=dadb492ce11b1f2b9b06b98152270e097702aaa581d1de59d339ebcdba8924fa&"
                 />
-                <div className="relative font-medium">Notifications</div>
+                <div
+                  onClick={() => {
+                    navigate("/notifications");
+                  }}
+                  className="relative font-medium"
+                >
+                  Notifications
+                </div>
               </div>
-              <div onClick={()=>{
-                navigate('/messages')
-              }} className="flex flex-row hover:opacity-50 cursor-pointer items-center justify-start gap-[0.63rem]">
+              <div
+                onClick={() => {
+                  navigate("/messages");
+                }}
+                className="flex flex-row hover:opacity-50 cursor-pointer items-center justify-start gap-[0.63rem]"
+              >
                 <img
                   className="relative w-[1.06rem] h-[1rem]"
                   alt=""
@@ -431,11 +587,14 @@ const Home1 = () => {
                 />
                 <div className="relative font-medium">Messages</div>
               </div>
-              <div onClick={()=>{
-                if(num===1){
-                  navigate('/communities');
-                }
-              }} className="flex flex-row hover:opacity-50 cursor-pointer items-start justify-start gap-[0.63rem]">
+              <div
+                onClick={() => {
+                  if (num === 1) {
+                    navigate("/communities");
+                  }
+                }}
+                className="flex flex-row hover:opacity-50 cursor-pointer items-start justify-start gap-[0.63rem]"
+              >
                 <img
                   className="relative w-[1.25rem] h-[1.19rem]"
                   alt=""
@@ -466,7 +625,12 @@ const Home1 = () => {
           </div>
 
           <div
-            className={`  relative w-[12rem] h-[2.25rem] text-left text-[1rem] text-white font-inter ${
+            onClick={() => {
+              if (num === 1) {
+                navigate("/profile");
+              }
+            }}
+            className={`cursor-pointer  relative w-[12rem] h-[2.25rem] text-left text-[1rem] text-white font-inter ${
               userData.length > 1 ? "" : "hidden"
             }`}
           >
@@ -483,17 +647,26 @@ const Home1 = () => {
                 src={userData.profile}
               />
             </div>
-            <img 
-            onClick={()=>{
-              if(num===1){
-                navigate('/profile')
-              }
-            }}
+            <img
+              onClick={() => {
+                if (num === 1) {
+                  navigate("/profile");
+                }
+              }}
               className=" hover:opacity-50  absolute cursor-pointer top-[0rem] left-[11.75rem] w-[1.5rem] h-[1.5rem] overflow-hidden"
               alt=""
               src="https://cdn.discordapp.com/attachments/1177493315898314792/1184074199577415741/image.png?ex=658aa608&is=65783108&hm=49441e880ec9e668ecd4fb83e21c896b03b202d851882189adb757ce47dd3e6f&"
             />
           </div>
+          <a href="https://dsocial.gitbook.io/dsocial/">
+            <div className="absolute top-[37.5rem] left-[0.5rem]">
+              <img
+                className="w-[45px] h-[45px]"
+                src="https://cdn.discordapp.com/attachments/1184864067295395960/1185768064957042849/image.png?ex=6590cf91&is=657e5a91&hm=84c157e2d696e4249b182ad84fcf48f519e7efe0f4ec500e4e7921448d2c3259&"
+                alt=""
+              />
+            </div>
+          </a>
         </div>
         {/* options end */}
 
@@ -503,7 +676,7 @@ const Home1 = () => {
             <div className="relative mx-auto my-auto rounded-[67px] bg-colours-gray-900 w-[39.375rem] h-[2.75rem] overflow-hidden text-left text-[1rem] text-gray font-inter ">
               <input
                 type="text"
-                class="absolute text-white top-[0.75rem] left-[4.06rem] bg-transparent font-medium border-none focus:bg-transparent hover:bg-transparent outline-none"
+                class="absolute text-white top-[0rem] left-[4.06rem] bg-transparent font-medium border-none focus:bg-transparent hover:bg-transparent outline-none"
                 placeholder="Search"
               />
               <img
@@ -513,15 +686,16 @@ const Home1 = () => {
               />
             </div>
           </div>
-          <div className="flex items-center justify-start left-5  space-x-4 transition-all duration-500 ease-in-out  relative w-full top-[2rem]" >
-            <img id="arrow1" 
-            onClick={handlePrev}
+          <div className="flex items-center justify-start left-5  space-x-4 transition-all duration-500 ease-in-out  relative w-full top-[2rem]">
+            <img
+              id="arrow1"
+              onClick={handlePrev}
               className="relative mr-5  w-[3.625rem] hover: h-[3.63rem] overflow-hidden"
               alt=""
               src="https://cdn.discordapp.com/attachments/1177493315898314792/1184104350436560906/image.png?ex=658ac21c&is=65784d1c&hm=3285308a6c83a4d8205ea999e393be2c3fd9d017d80e021cf1a96e6bd8e96d7d&"
             />
 
-{/* {
+            {/* {
   allPost.map( (p,i) => {
     // const d = await getUserData(p[4]);
 
@@ -540,31 +714,31 @@ const Home1 = () => {
     );
   }
 )} */}
-{allPost.length > 0 && (
-        <PostCard
-        keys={allPost[postIndex][4]}
-          key={allPost[postIndex].id}
-          desc={allPost[postIndex][1]}
-        post={allPost[postIndex][5]}
-        like={Number(allPost[postIndex][3])}
-        hash={allPost[postIndex][2]}
-        index={
-          (() => {
-            let foundIndex = null;
-            allSequencePost.forEach((m, i) => {
-              if (m[1] === allPost[postIndex][1]) {
-                foundIndex = i;
-              }
-            });
-            return foundIndex; // Return the found index
-          })() // Call the function here to get the index value
-        }
-        />
-      )}
+            {allPost.length > 0 && (
+              <PostCard
+                keys={allPost[postIndex][4]}
+                key={allPost[postIndex].id}
+                desc={allPost[postIndex][1]}
+                post={allPost[postIndex][5]}
+                like={Number(allPost[postIndex][3])}
+                hash={allPost[postIndex][2]}
+                index={
+                  (() => {
+                    let foundIndex = null;
+                    allSequencePost.forEach((m, i) => {
+                      if (m[1] === allPost[postIndex][1]) {
+                        foundIndex = i;
+                      }
+                    });
+                    return foundIndex; // Return the found index
+                  })() // Call the function here to get the index value
+                }
+              />
+            )}
             {/* <PostCard  /> */}
             <img
-            id="arrow2"
-            onClick={handleNext}
+              id="arrow2"
+              onClick={handleNext}
               className="relative ml-5  w-[3.625rem] hover: h-[3.63rem] overflow-hidden rotate-180"
               alt=""
               src="https://cdn.discordapp.com/attachments/1177493315898314792/1184104350436560906/image.png?ex=658ac21c&is=65784d1c&hm=3285308a6c83a4d8205ea999e393be2c3fd9d017d80e021cf1a96e6bd8e96d7d&"
@@ -576,8 +750,17 @@ const Home1 = () => {
         {/* wallet section */}
         <div className="flex flex-col w-full bg-black">
           <div className="flex w-full justify-around h-[5.75rem] items-center">
-            <div className="relative rounded-md [background:linear-gradient(106.75deg,_#fdd835,_#fff_49.15%,_#ffd000)] box-border  h-[2.563rem] w-[8.438rem] overflow-hidden text-left text-[0.88rem] text-black font-inter border-t-[1px] border-solid border-cornsilk border-r-[1px] border-l-[1px]">
-              <div className="absolute top-[0.75rem] left-[1.38rem] font-medium">
+            <div
+              title="Buy Coins"
+              onClick={() => {
+                setIsBuyCoinModal(true);
+              }}
+              className="relative cursor-pointer rounded-md [background:linear-gradient(106.75deg,_#fdd835,_#fff_49.15%,_#ffd000)] box-border  h-[2.563rem] w-[8.438rem] overflow-hidden text-left text-[0.88rem] text-black font-inter border-t-[1px] border-solid border-cornsilk border-r-[1px] border-l-[1px]"
+            >
+              <div
+                title="Buy Coins"
+                className="absolute top-[0.75rem] left-[1.38rem] font-medium"
+              >
                 {userBal | 0} coins
               </div>
               <img
@@ -597,7 +780,13 @@ const Home1 = () => {
                 </div>
               </div>
             ) : (
-              <div onClick={() => window.location.reload()} className="relative rounded-lg hover:bg-violet-400 transition-transform transform hover:scale-75 bg-blueviolet box-border w-[9.875rem] h-[2.56rem] overflow-hidden text-left text-[1rem] text-white font-inter border-t-[1px] border-solid border-mediumslateblue border-r-[1px] border-l-[1px]">
+              <div
+                onClick={() => {
+                  setIsLogout(1);
+                  window.location.reload();
+                }}
+                className="relative rounded-lg hover:bg-violet-400 transition-transform transform hover:scale-75 bg-blueviolet box-border w-[9.875rem] h-[2.56rem] overflow-hidden text-left text-[1rem] text-white font-inter border-t-[1px] border-solid border-mediumslateblue border-r-[1px] border-l-[1px]"
+              >
                 <div className="text-center relative top-2 font-medium">
                   Logout
                 </div>
@@ -614,25 +803,25 @@ const Home1 = () => {
                 Amit Sinha
               </div>
               <div className="absolute top-[9.44rem] left-[3.81rem] text-[1rem] font-medium">
-                Amit Sinha
+                Ravi Shastri
               </div>
               <div className="absolute top-[13.75rem] left-[3.81rem] text-[1rem] font-medium">
-                Amit Sinha
+                Shubham Kumar
               </div>
               <div className="absolute top-[18.06rem] left-[3.81rem] text-[1rem] font-medium">
-                Amit Sinha
+                Shruti Singh
               </div>
               <div className="absolute top-[6.31rem] left-[3.81rem] text-colours-gray-500">
                 @amitsinha.dso
               </div>
               <div className="absolute top-[10.63rem] left-[3.81rem] text-colours-gray-500">
-                @amitsinha.dso
+                @ravi.dso
               </div>
               <div className="absolute top-[14.94rem] left-[3.81rem] text-colours-gray-500">
-                @amitsinha.dso
+                @shubham.dso
               </div>
               <div className="absolute top-[19.25rem] left-[3.81rem] text-colours-gray-500">
-                @amitsinha.dso
+                @shrutisingh.dso
               </div>
               <img
                 alt="e"
@@ -641,7 +830,7 @@ const Home1 = () => {
               />
               <img
                 alt="e"
-                src="https://cdn.discordapp.com/attachments/1177493315898314792/1184072438695338046/image.png?ex=658aa464&is=65782f64&hm=633b38526fb6b6da794465b600fb96b51339200700063e89bf541465c40aec95&"
+                src="    https://cdn.discordapp.com/attachments/1177493315898314792/1184834164336377937/image.png?ex=658d69cd&is=657af4cd&hm=4e6452341bbbbd4598264cbca53b144ed7be7af2da805f001f8895c10f260968&"
                 className="absolute top-[9.44rem] left-[1.06rem] rounded-lg bg-white w-[2.25rem] h-[2.25rem] overflow-hidden"
               />
               <img
@@ -651,7 +840,7 @@ const Home1 = () => {
               />
               <img
                 alt="e"
-                src="https://cdn.discordapp.com/attachments/1177493315898314792/1184072438695338046/image.png?ex=658aa464&is=65782f64&hm=633b38526fb6b6da794465b600fb96b51339200700063e89bf541465c40aec95&"
+                src="  https://cdn.discordapp.com/attachments/1177493315898314792/1184834239817072710/image.png?ex=658d69df&is=657af4df&hm=dc1aded63d23ca814306fb6874df8735201fab2e025c1dda33a892fb1a416c01&"
                 className="absolute top-[18.06rem] left-[1.06rem] rounded-lg bg-white w-[2.25rem] h-[2.25rem] overflow-hidden"
               />
               <img
@@ -685,22 +874,30 @@ const Home1 = () => {
               {" "}
               Bounty
             </b>
-            <div className="absolute top-[3.94rem] left-[1rem] rounded-6xs bg-[#2a2a2a] box-border w-[15rem] h-[2.19rem] overflow-hidden border-t-[1px] border-solid border-dimgray">
-              <div className="absolute top-[0.5rem] left-[0.81rem] font-medium">
-                Complete 1 Like
+            <div
+              className={`absolute top-[3.94rem] left-[1rem] rounded-6xs ${
+                rewardLikes >= 1 ? "bg-green-500" : "bg-[#2a2a2a]"
+              } box-border w-[15rem] h-[2.19rem] overflow-hidden border-t-[1px] border-solid border-dimgray`}
+            >
+              <div className="absolute top-[0.5rem] left-[0.rem] font-medium">
+                Complete {rewardLikes}/1 Like
               </div>
               <img
-                className="absolute top-[0.44rem] left-[12.75rem] w-[1.38rem] h-[1.38rem] overflow-hidden"
+                className="absolute top-[0.44rem] left-[13rem] w-[1.38rem] h-[1.38rem] overflow-hidden"
                 alt=""
                 src="https://cdn.discordapp.com/attachments/1177493315898314792/1184074424589234247/image.png?ex=658aa63d&is=6578313d&hm=2b6b6c395d7c9522dca53ed54c6b3bd6c9ec744cfa4550da8112ffd872e6a66d&"
               />
             </div>
-            <div className="absolute top-[7.25rem] left-[1rem] rounded-6xs bg-[#2a2a2a] box-border w-[15rem] h-[2.19rem] overflow-hidden border-t-[1px] border-solid border-dimgray">
-              <div className="absolute top-[0.5rem] left-[0.81rem] font-medium">
-                Complete 10 Comments
+            <div
+              className={`absolute top-[7.25rem] left-[1rem] rounded-6xs ${
+                rewardComments >= 10 ? "bg-green-500" : "bg-[#2a2a2a]"
+              }  box-border w-[15rem] h-[2.19rem] overflow-hidden border-t-[1px] border-solid border-dimgray`}
+            >
+              <div className="absolute top-[0.5rem] left-[0.5rem] font-medium">
+                Complete {rewardComments}/10 Comments
               </div>
               <img
-                className="absolute top-[0.44rem] left-[12.75rem] w-[1.38rem] h-[1.38rem] overflow-hidden"
+                className="absolute top-[0.44rem] left-[13rem] w-[1.38rem] h-[1.38rem] overflow-hidden"
                 alt=""
                 src="https://cdn.discordapp.com/attachments/1177493315898314792/1184074424589234247/image.png?ex=658aa63d&is=6578313d&hm=2b6b6c395d7c9522dca53ed54c6b3bd6c9ec744cfa4550da8112ffd872e6a66d&"
               />
