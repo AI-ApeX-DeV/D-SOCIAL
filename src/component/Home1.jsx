@@ -866,7 +866,7 @@ const Home1 = () => {
               </div>
             </div>
           </div>
-
+{/* Modified Bounty Section */}
           <div className="relative rounded-2xl [background:linear-gradient(180.13deg,_#202020,_#181818)] ml-10 mt-4 box-border w-[16.938rem] h-[11.13rem] overflow-hidden text-left text-[1rem] text-gray-50 font-inter ">
             <b className="absolute top-[0.94rem] left-[1.31rem] text-[1.13rem] text-white">
               {" "}
